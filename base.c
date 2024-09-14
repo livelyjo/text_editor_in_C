@@ -18,29 +18,6 @@ struct StringArray {
 	int allocated;
 };
 
-struct LinkNode {
-	struct StringArray *data;
-	struct StringArray *next;
-	struct StringArray *prev;
-};
-
-struct LinkedList {
-	struct LinkNode *head = NULL;
-	struct LinkNode *tail = NULL;
-};
-
-struct LinkedList *linked_list_constructor(struct *StringArray Array)
-{
-	struct LinkedList *list = (struct LinkedList *) malloc(sizeof(struct LinkedList));
-	struct LinkNode *node = (struct LinkNode *) malloc(sizeof(struct LinkNode));
-	node->data = Array;
-	node->next = NULL;
-	node->prev = NULL;
-	list->head = node;
-	list->tail = node;
-	return list;
-}
-
 struct StringArray *array_constructor()
 {
 	struct StringArray *MyArray = (struct StringArray *) malloc(sizeof(struct StringArray));
@@ -48,6 +25,17 @@ struct StringArray *array_constructor()
 	MyArray->allocated = 100;
 	MyArray->string = malloc(100);
 	return MyArray;
+}
+
+void draw_document(struct StringArray* PointerArray[], Display* MainDisplay, Window MainWindow, GC Context)
+{
+	XClearWindow(MainDisplay, MainWindow);
+	int CoordinateX = 10;
+	int CoordinateY = 20;
+	for(int i=0;PointerArray[i]!=NULL;++i){
+		XDrawString(MainDisplay, MainWindow, Context, CoordinateX, CoordinateY, PointerArray[i]->string, PointerArray[i]->length);
+		CoordinateY += 15;
+	}
 }
 
 void expand_array(struct StringArray *MyArray)
@@ -95,53 +83,70 @@ int main()
 			       XNInputStyle, XIMPreeditNothing | XIMStatusNothing, 
 			       XNClientWindow, MainWindow,
 			       NULL);
-
-	struct StringArray *MyArray = array_constructor();
-	struct LinkedList *MyLinkedList = linked_list_constructor(MyArray);
-	struct LinkNode *CurrentNode = MyLinkedList->head;
-	/*Shifting to a Linked List structure. Need to figure out how that changes the way I do the data manipulations below*/
+	struct StringArray* LinePointers[10] = {NULL};
+	LinePointers[0] = array_constructor();
+	int CurrentArray = 0;
 	int IsWindowOpen = 1;
 	char buffer_return[1000];
 	int bytes_buffer;
 	KeySym keysym_return;
 	Status status_return;
 	int Test;
-	int nitems = 1;
-	int CurrentString = 1;
-	int StartingX = 10;
-	int StartingY = 20;
-	int CurrentX = StartingX;
-	int CurrentY = StartingY;
 	while(IsWindowOpen) {
 		XEvent GeneralEvent = {};
 		XNextEvent(MainDisplay, &GeneralEvent);
 		if(GeneralEvent.type == KeyPress){
 			XKeyEvent *Event = &GeneralEvent.xkey;
 			if(Event->keycode == 22){
-				--MyArray->length;
+				if((LinePointers[CurrentArray]->length)==0 && CurrentArray!=0){
+					struct StringArray* Next = LinePointers[CurrentArray+1];
+					for(int i=CurrentArray;LinePointers[i]!=NULL;++i){
+						LinePointers[i] = Next;
+						Next = LinePointers[i+1];
+					}
+					--CurrentArray;
+				}
+				else if((LinePointers[CurrentArray]->length)>0)
+					--LinePointers[CurrentArray]->length;
 			}
-			else if(((MyArray->allocated)-(MyArray->length))<=4) expand_array(MyArray);
+			/*else if(((MyArray->allocated)-(MyArray->length))<=4) expand_array(MyArray);*/
 			else if(Event->keycode == 23){
 				for(int i=4;i>0;--i){
-				MyArray->string[MyArray->length] = ' ';
-				MyArray->length++;
+					LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = ' ';
+					LinePointers[CurrentArray]->length++;
 				}
 			}
 			else if(Event->keycode == 36){
-				MyArray->string[MyArray->length- = '\n';
-				MyArray->length++;
+				if(LinePointers[CurrentArray+1]!=NULL){
+					struct StringArray* Current = LinePointers[CurrentArray];
+					LinePointers[CurrentArray] = array_constructor();
+					struct StringArray* Previous;
+					int i;
+					for(i=CurrentArray+1;LinePointers[i]!=NULL;++i){
+						Previous = Current;
+						Current = LinePointers[i];
+						LinePointers[i] = Previous;
+					}
+					LinePointers[i] = Current;
+					++CurrentArray;
+				}
+				else {
+					++CurrentArray;
+					LinePointers[CurrentArray] = array_constructor();
+				}
 
 			}
 			else {
 				bytes_buffer = sizeof(buffer_return);
 				Test = XmbLookupString(StringContext, Event, buffer_return, bytes_buffer, &keysym_return, &status_return);
-				MyArray->string[MyArray->length] = *buffer_return;
-				++MyArray->length;
+				LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = *buffer_return;
+				++LinePointers[CurrentArray]->length;
 			} 
 		}
-		XClearWindow(MainDisplay, MainWindow);
+		draw_document(LinePointers, MainDisplay, MainWindow, Context);
+		/*XClearWindow(MainDisplay, MainWindow);
 		XDrawString(MainDisplay, MainWindow, Context, CurrentX, CurrentY, MyArray->string, MyArray->length);
-		XDrawString(MainDisplay, MainWindow, Context, CurrentX, 35, "T", 1);
+		XDrawString(MainDisplay, MainWindow, Context, CurrentX, 35, "T", 1);*/
 	}
 }
 
