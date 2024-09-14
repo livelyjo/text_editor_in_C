@@ -38,10 +38,10 @@ void draw_document(struct StringArray* PointerArray[], Display* MainDisplay, Win
 	}
 }
 
-void expand_array(struct StringArray *MyArray)
+void expand_array(struct StringArray **MyArray, int *AllocatedLines)
 {
-	MyArray->allocated *= 2;
-	MyArray->string = realloc(MyArray->string, MyArray->allocated);
+	*AllocatedLines += 10;
+	MyArray = realloc(MyArray, *AllocatedLines * sizeof(struct StringArray*));
 }
 
 int main() 
@@ -83,8 +83,11 @@ int main()
 			       XNInputStyle, XIMPreeditNothing | XIMStatusNothing, 
 			       XNClientWindow, MainWindow,
 			       NULL);
-	struct StringArray* LinePointers[10] = {NULL};
+	struct StringArray** LinePointers = malloc(10 * sizeof(struct StringArray*));
 	LinePointers[0] = array_constructor();
+	LinePointers[1] = NULL;
+	int nLinePointers = 1;
+	int AllocatedLines = 10;
 	int CurrentArray = 0;
 	int IsWindowOpen = 1;
 	char buffer_return[1000];
@@ -97,6 +100,8 @@ int main()
 		XNextEvent(MainDisplay, &GeneralEvent);
 		if(GeneralEvent.type == KeyPress){
 			XKeyEvent *Event = &GeneralEvent.xkey;
+			/*Problem could be here too with the expand_array function*/
+			if(AllocatedLines <= nLinePointers+1) expand_array(LinePointers, &AllocatedLines);
 			if(Event->keycode == 22){
 				if((LinePointers[CurrentArray]->length)==0 && CurrentArray!=0){
 					struct StringArray* Next = LinePointers[CurrentArray+1];
@@ -105,21 +110,23 @@ int main()
 						Next = LinePointers[i+1];
 					}
 					--CurrentArray;
+					--nLinePointers;
 				}
 				else if((LinePointers[CurrentArray]->length)>0)
 					--LinePointers[CurrentArray]->length;
 			}
-			/*else if(((MyArray->allocated)-(MyArray->length))<=4) expand_array(MyArray);*/
 			else if(Event->keycode == 23){
 				for(int i=4;i>0;--i){
 					LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = ' ';
 					LinePointers[CurrentArray]->length++;
 				}
 			}
+			/*Something is going wrong when i try to reallocate more space to the array holding the pointers to the strings*/
 			else if(Event->keycode == 36){
 				if(LinePointers[CurrentArray+1]!=NULL){
 					struct StringArray* Current = LinePointers[CurrentArray];
 					LinePointers[CurrentArray] = array_constructor();
+					++nLinePointers;
 					struct StringArray* Previous;
 					int i;
 					for(i=CurrentArray+1;LinePointers[i]!=NULL;++i){
@@ -128,11 +135,14 @@ int main()
 						LinePointers[i] = Previous;
 					}
 					LinePointers[i] = Current;
+					LinePointers[i+1] = NULL;
 					++CurrentArray;
 				}
 				else {
 					++CurrentArray;
 					LinePointers[CurrentArray] = array_constructor();
+					LinePointers[CurrentArray+1] = NULL;
+					++nLinePointers;
 				}
 
 			}
