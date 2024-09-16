@@ -112,6 +112,7 @@ int main()
 	while(IsWindowOpen) {
 		XEvent GeneralEvent = {};
 		XNextEvent(MainDisplay, &GeneralEvent);
+		if(GeneralEvent.type == 
 		if(GeneralEvent.type == KeyPress){
 			XKeyEvent *Event = &GeneralEvent.xkey;
 			if(AllocatedLines <= nLinePointers+1) {
@@ -119,7 +120,7 @@ int main()
 			}
 			/*Backspace*/
 			if(Event->keycode == 22){
-				position = false;
+				TruePosition = false;
 				if((LinePointers[CurrentArray]->length)==0 && CurrentArray!=0){
 					struct StringArray* Next = LinePointers[CurrentArray+1];
 					for(int i=CurrentArray;LinePointers[i]!=NULL;++i){
@@ -144,7 +145,7 @@ int main()
 			}
 			/*Tab*/
 			else if(Event->keycode == 23){
-				position = false;
+				TruePosition = false;
 				for(int i=4;i>0;--i){
 					LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = ' ';
 					LinePointers[CurrentArray]->string[(LinePointers[CurrentArray]->length)+1] = '\0';
@@ -156,7 +157,7 @@ int main()
 			}
 			/*Return*/
 			else if(Event->keycode == 36){
-				position = false;
+				TruePosition = false;
 				if(LinePointers[CurrentArray+1]!=NULL){
 					struct StringArray* Current = LinePointers[CurrentArray];
 					LinePointers[CurrentArray] = array_constructor();
@@ -192,7 +193,7 @@ int main()
 			}
 			/*Left*/
 			else if(Event->keycode == 113){
-				position = false;
+				TruePosition = false;
 				if(MyCaret.topX != 10){
 					MyCaret.topX -= 6;
 					MyCaret.bottomX -= 6;
@@ -201,7 +202,7 @@ int main()
 			}
 			/*Right*/
 			else if(Event->keycode == 114){
-				position = false;
+				TruePosition = false;
 				if(MyCaret.topX != ((LinePointers[CurrentArray]->length) * 6) + 10){
 					MyCaret.topX += 6;
 					MyCaret.bottomX += 6;
@@ -213,7 +214,7 @@ int main()
 				if(MyCaret.topY != 10){
 					MyCaret.topY -= 15;
 					MyCaret.bottomY -= 15;
-					if(TruePosition!=true){
+					if(TruePosition==false){
 						position = MyCaret.InsertionPoint - LinePointers[CurrentArray]->string;
 						TruePosition = true;
 					}
@@ -235,7 +236,7 @@ int main()
 				if(LinePointers[CurrentArray+1]!=NULL){
 					MyCaret.topY += 15;
 					MyCaret.bottomY += 15;
-					if(TruePosition!=true){
+					if(TruePosition==false){
 						position = MyCaret.InsertionPoint - LinePointers[CurrentArray]->string;
 						TruePosition = true;
 					}
@@ -255,6 +256,7 @@ int main()
 			else if(Event->keycode == 50 || Event->keycode == 62) ;
 			/*Insert Character*/
 			else {
+				TruePosition = false;
 				if(*MyCaret.InsertionPoint != '\0'){
 					char Current = *MyCaret.InsertionPoint;
 					char Previous;
