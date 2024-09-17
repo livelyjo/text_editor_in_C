@@ -75,7 +75,7 @@ int main()
 	int AttributeValueMask = CWBackPixel | CWEventMask;
 	XSetWindowAttributes WindowAttributes = {};
 	WindowAttributes.background_pixel = 0xffd7d0da;
-	WindowAttributes.event_mask = StructureNotifyMask | KeyPressMask | KeyReleaseMask | ExposureMask;
+	WindowAttributes.event_mask = StructureNotifyMask | KeyPressMask | KeyReleaseMask | ExposureMask | ButtonPressMask | ButtonReleaseMask | ButtonMotionMask;
 
 	Window MainWindow = XCreateWindow(MainDisplay, RootWindow, WindowX, WindowY, WindowWidth, WindowHeight, BorderWidth,
 				   WindowDepth, WindowClass, WindowVisual, AttributeValueMask, &WindowAttributes);
@@ -112,8 +112,20 @@ int main()
 	while(IsWindowOpen) {
 		XEvent GeneralEvent = {};
 		XNextEvent(MainDisplay, &GeneralEvent);
-		if(GeneralEvent.type == 
-		if(GeneralEvent.type == KeyPress){
+		if(GeneralEvent.type == ButtonPress){
+			XButtonEvent *Event = &GeneralEvent.xbutton;
+			int CoordX = Event->x;
+			int CoordY = Event->y;
+			int XPosition = (CoordX-10)/6;
+			int YPosition = (CoordY-10)/15;
+			MyCaret.topX = (XPosition*6)+10;
+			MyCaret.bottomX = (XPosition*6)+10;
+			MyCaret.topY = (YPosition*15)+10;
+			MyCaret.bottomY = (YPosition*15)+20;
+			/*Something is wrong with moving the insertion. It inputs in two array when I do this*/
+			MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
+			}
+		else if(GeneralEvent.type == KeyPress){
 			XKeyEvent *Event = &GeneralEvent.xkey;
 			if(AllocatedLines <= nLinePointers+1) {
 				expand_array(LinePointers, &AllocatedLines);
