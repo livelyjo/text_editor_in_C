@@ -27,6 +27,16 @@ typedef struct {
 	char* InsertionPoint;
 } caret;
 
+struct SelectedArray {
+	char* End1;
+	char* End2;
+	int Difference;
+	int LeftX;
+	int RightX;
+	int TopY;
+	int BottomY;
+};
+
 struct StringArray *array_constructor()
 {
 	struct StringArray *MyArray = (struct StringArray *) malloc(sizeof(struct StringArray));
@@ -37,7 +47,7 @@ struct StringArray *array_constructor()
 	return MyArray;
 }
 
-void draw_document(struct StringArray* PointerArray[], Display* MainDisplay, Window MainWindow, GC Context, caret MyCaret)
+void draw_document(struct StringArray* PointerArray[], Display* MainDisplay, Window MainWindow, GC Context, caret MyCaret, XRectangle* Rectangles, int nRectangles)
 {
 	XClearWindow(MainDisplay, MainWindow);
 	int CoordinateX = 10;
@@ -47,7 +57,9 @@ void draw_document(struct StringArray* PointerArray[], Display* MainDisplay, Win
 		CoordinateY += 15;
 	}
 	XDrawLine(MainDisplay, MainWindow, Context, MyCaret.topX, MyCaret.topY, MyCaret.bottomX, MyCaret.bottomY);
+	XDrawRectangles(MainDisplay, MainWindow, Context, Rectangles, nRectangles);
 }
+
 
 void expand_array(struct StringArray **MyArray, int *AllocatedLines)
 {
@@ -95,6 +107,7 @@ int main()
 			       XNClientWindow, MainWindow,
 			       NULL);
 	struct StringArray** LinePointers = malloc(10 * sizeof(struct StringArray*));
+	struct SelectedArray Selected;
 	LinePointers[0] = array_constructor();
 	LinePointers[1] = NULL;
 	int nLinePointers = 1;
@@ -107,12 +120,18 @@ int main()
 	Status status_return;
 	int Test;
 	bool TruePosition = false;
+	bool ButtonPressed = false;
 	ptrdiff_t position = 0;
 	caret MyCaret = {10, 10, 10, 20, LinePointers[0]->string};
+	XRectangle *Rectangles = (XRectangle *) malloc(100 * sizeof(XRectangle));
+	int nRectangles = 0;
+	int CurrentSelectedArray = 0;
 	while(IsWindowOpen) {
 		XEvent GeneralEvent = {};
 		XNextEvent(MainDisplay, &GeneralEvent);
+		/*Button Press*/
 		if(GeneralEvent.type == ButtonPress){
+			position = false;
 			XButtonEvent *Event = &GeneralEvent.xbutton;
 			int CoordX = Event->x;
 			int CoordY = Event->y;
@@ -122,10 +141,101 @@ int main()
 			MyCaret.bottomX = (XPosition*6)+10;
 			MyCaret.topY = (YPosition*15)+10;
 			MyCaret.bottomY = (YPosition*15)+20;
-			/*Something is wrong with moving the insertion. It inputs in two array when I do this*/
 			MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
+			CurrentArray = YPosition;
+			CurrentSelectedArray = CurrentArray;
 			}
+		/*Motion Notify or when the mouse moves*/
+		else if(GeneralEvent.type == MotionNotify){
+			position = false;
+			XPointerMovedEvent *Event = &GeneralEvent.xmotion;
+			if(Event->state == Button1Mask){
+				if(ButtonPressed==false){
+					Selected.End1 = MyCaret.InsertionPoint;
+					Selected.End2 = MyCaret.InsertionPoint;
+					Selected.Difference = 0;
+					Selected.LeftX = Selected.RightX = MyCaret.topX;
+					Selected.TopY = MyCaret.topY;
+					Selected.BottomY = MyCaret.bottomY;
+					ButtonPressed = true;
+				}
+				int CoordX = Event->x;
+				int CoordY = Event->y;
+				int XPosition = (CoordX-10)/6;
+				int YPosition = (CoordY-10)/15;
+				if(CoordX < Selected.LeftX){
+					--Selected.End2;
+					Selected.LeftX -= 6;
+					if(nRectangles == Selected.Difference){
+						XRectangle Rectangle = {Selected.LeftX, Selected.TopY, (Selected.RightX-Selected.LeftX), 10};
+						Rectangles[nRectangles] = Rectangle;
+						++nRectangles;
+					}
+					else{
+						Rectangles[nRectangles-1].x = Selected.LeftX;
+						Rectangles[nRectangles-1].width = Selected.RightX - Selected.LeftX;
+					}
+				}
+				if(CoordX > Selected.RightX){
+					++Selected.End2;
+					Selected.RightX += 6;
+					if(nRectangles == Selected.Difference){
+						XRectangle Rectangle = {Selected.LeftX, Selected.TopY, (Selected.RightX-Selected.LeftX), 10};
+						Rectangles[nRectangles] = Rectangle;
+						++nRectangles;
+					}
+					else{
+						Rectangles[nRectangles-1].width = Selected.RightX - Selected.LeftX;
+					}
+				}
+				if(CoordY > Selected.BottomY){
+						++Selected.Difference;
+						if(Selected.Difference<2)
+							position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
+						else{
+							position = 0;
+							for(int i=1;i==nRectangles-1;++i){
+								Rectangles[i].x = 10;
+								Rectangles[i].width = (LinePointers[CurrentSelectedArray+i]->length)*6;
+							}
+						}
+						Rectangles[nRectangles-1].width = ((LinePointers[CurrentSelectedArray]->length)-position)*6;
+						XRectangle Rectangle = {10, (Selected.TopY+(15*nRectangles)), (Selected.RightX-10), 10};
+						Rectangles[nRectangles] = Rectangle;
+						++nRectangles;
+						Selected.BottomY += 15;
+						++CurrentSelectedArray;
+				}
+				if(CoordY < Selected.TopY){
+						++Selected.Difference;
+						if(Selected.Difference<2){
+							position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
+						}
+						else{
+							position = 0;
+							for(int i=nRectangles-1;i==0;--i){
+								Rectangles[i].x = 10;
+								Rectangles[i].width = (LinePointers[CurrentSelectedArray+i]->length)*6;
+							}
+						}
+						/*You're getting the selecting wrong. I'm sure it's an easy fix and has something to do with how I'm using position. Also you should have used a stack data structure.*/
+						Rectangles[0].x = 10;
+						Rectangles[0].width = (position*6);
+						XRectangle Rectangle = {10, (Selected.TopY-(15*nRectangles)), (Selected.RightX-10), 10};
+						Rectangles[nRectangles] = Rectangle;
+						++nRectangles;
+						Selected.TopY -= 15;
+						++CurrentSelectedArray;
+				}
+			}
+		}
+		/*Button Released*/
+		else if(GeneralEvent.type == ButtonRelease){
+			/*nRectangles = 0;*/
+			ButtonPressed = false;
+		}
 		else if(GeneralEvent.type == KeyPress){
+			ButtonPressed = false;
 			XKeyEvent *Event = &GeneralEvent.xkey;
 			if(AllocatedLines <= nLinePointers+1) {
 				expand_array(LinePointers, &AllocatedLines);
@@ -300,8 +410,9 @@ int main()
 					++MyCaret.InsertionPoint;
 				}
 			} 
+			CurrentSelectedArray = CurrentArray;
 		}
-		draw_document(LinePointers, MainDisplay, MainWindow, Context, MyCaret);
+		draw_document(LinePointers, MainDisplay, MainWindow, Context, MyCaret, Rectangles, nRectangles);
 		/*XClearWindow(MainDisplay, MainWindow);
 		XDrawString(MainDisplay, MainWindow, Context, CurrentX, CurrentY, MyArray->string, MyArray->length);
 		XDrawString(MainDisplay, MainWindow, Context, CurrentX, 35, "T", 1);*/
