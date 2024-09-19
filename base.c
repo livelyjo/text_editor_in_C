@@ -176,6 +176,7 @@ int main()
 						Rectangles[nRectangles-1].width = Selected.RightX - Selected.LeftX;
 					}
 				}
+				/*Make the end of your pointer while holding down mod1 the new insertion point*/
 				if(CoordX > Selected.RightX){
 					++Selected.End2;
 					Selected.RightX += 6;
@@ -207,31 +208,48 @@ int main()
 						++CurrentSelectedArray;
 				}
 				if(CoordY < Selected.TopY){
-						++Selected.Difference;
-						if(Selected.Difference<2){
-							position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
-						}
-						else{
-							position = 0;
-							for(int i=nRectangles-1;i==0;--i){
-								Rectangles[i].x = 10;
-								Rectangles[i].width = (LinePointers[CurrentSelectedArray+i]->length)*6;
-							}
-						}
-						/*You're getting the selecting wrong. I'm sure it's an easy fix and has something to do with how I'm using position. Also you should have used a stack data structure.*/
+					if(nRectangles==0){
+						position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
+						XRectangle Rectangle1 = {10, Selected.TopY, (position*6), 10};
+						Rectangles[nRectangles] = Rectangle1;
+						Selected.TopY -= 15;
+						--CurrentSelectedArray;
+						++nRectangles;
+						int width = LinePointers[CurrentSelectedArray]->length - position;
+						XRectangle Rectangle2 = {Selected.LeftX, Selected.TopY,(width*6), 10};
+						Rectangles[nRectangles] = Rectangle2;
+						++nRectangles;
+					}
+					else if(nRectangles==1){
+						position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
 						Rectangles[0].x = 10;
-						Rectangles[0].width = (position*6);
-						XRectangle Rectangle = {10, (Selected.TopY-(15*nRectangles)), (Selected.RightX-10), 10};
+						Rectangles[0].width = position*6;
+						Selected.TopY -= 15;
+						--CurrentSelectedArray;
+						int width = LinePointers[CurrentSelectedArray]->length - position;
+						XRectangle Rectangle = {Selected.LeftX, Selected.TopY,(width*6), 10};
 						Rectangles[nRectangles] = Rectangle;
 						++nRectangles;
+					}
+					else{
 						Selected.TopY -= 15;
-						++CurrentSelectedArray;
+						--CurrentSelectedArray;
+						int width = LinePointers[CurrentSelectedArray]->length - position;
+						XRectangle Rectangle = {Selected.LeftX, Selected.TopY,(width*6), 10};
+						Rectangles[nRectangles] = Rectangle;
+						for(int i=nRectangles-1;i!=0;--i){
+							Rectangles[i].x = 10;
+							Rectangles[i].width = LinePointers[CurrentSelectedArray+i]->length * 6;
+						}
+						++nRectangles;
+					}
+
 				}
 			}
 		}
 		/*Button Released*/
 		else if(GeneralEvent.type == ButtonRelease){
-			/*nRectangles = 0;*/
+			nRectangles = 0;
 			ButtonPressed = false;
 		}
 		else if(GeneralEvent.type == KeyPress){
