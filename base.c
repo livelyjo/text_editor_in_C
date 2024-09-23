@@ -164,8 +164,6 @@ int main()
 				int XPosition = (CoordX-10)/6;
 				int YPosition = (CoordY-10)/15;
 			if(YPosition <= nLinePointers-1){
-				CurrentArray = YPosition;
-				CurrentSelectedArray = CurrentArray;
 				if(XPosition <= LinePointers[YPosition]->length){
 					if(ButtonPressed==false){
 						Selected.End1 = MyCaret.InsertionPoint;
@@ -310,8 +308,43 @@ int main()
 							}
 							++nRectangles;
 						}
-					
-
+					}
+					if(CoordY > Selected.TopY + 15){
+						--Selected.Difference;
+						Direction = 0;
+						MyCaret.topX = (XPosition*6)+10;
+						MyCaret.bottomX = (XPosition*6)+10;
+						MyCaret.topY = (YPosition*15)+10;
+						MyCaret.bottomY = (YPosition*15)+20;
+						MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
+						CurrentArray = YPosition;
+						CurrentSelectedArray=CurrentArray;
+						if(nRectangles > 2){
+							Rectangles[nRectangles-2].x = MyCaret.topX;
+							Rectangles[nRectangles-2].y = MyCaret.topY;
+							int width = LinePointers[CurrentSelectedArray]->length - XPosition;
+							Rectangles[nRectangles-2].width = width*6 ;
+							Selected.TopY = MyCaret.topY;
+							Selected.LeftX = MyCaret.topX;
+							Selected.RightX = MyCaret.topX + (width*6);
+						}
+						else{
+							Selected.TopY = MyCaret.topY;
+							Selected.LeftX = MyCaret.topX;
+							Selected.RightX = Rectangles[0].x + Rectangles[0].width;
+							if(MyCaret.topX > Rectangles[0].x){
+								int width = (Rectangles[0].x + Rectangles[0].width)-MyCaret.topX;
+								Rectangles[0].x = MyCaret.topX;
+								Rectangles[0].width = width;
+							}
+							/*Needs to be corrected. This is what happens when you go down after going up on the right side.*/
+							else {
+								int width = LinePointers[CurrentSelectedArray]->length - XPosition;
+								Rectangles[0].x = Rectangles[0].x + Rectangles[0].width;
+								Rectangles[0].width = width*6;
+							}
+						}
+						--nRectangles;
 					}
 				}
 			}
@@ -501,9 +534,6 @@ int main()
 			CurrentSelectedArray = CurrentArray;
 		}
 		draw_document(LinePointers, MainDisplay, MainWindow, Context, MyCaret, Rectangles, nRectangles);
-		/*XClearWindow(MainDisplay, MainWindow);
-		XDrawString(MainDisplay, MainWindow, Context, CurrentX, CurrentY, MyArray->string, MyArray->length);
-		XDrawString(MainDisplay, MainWindow, Context, CurrentX, 35, "T", 1);*/
 	}
 }
 
