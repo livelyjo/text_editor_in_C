@@ -127,6 +127,7 @@ int main()
 	int nRectangles = 0;
 	int CurrentSelectedArray = 0;
 	int Direction;
+	int YDirection;
 
 /*Continue working on select functionality. Do this by refactoring the down selecting and when selecting in either direction it regresses a line. Same thing that happens when going left then right for selecting*/
 
@@ -171,7 +172,7 @@ int main()
 						Selected.Difference = 0;
 						Selected.LeftX = Selected.RightX = MyCaret.topX;
 						Selected.TopY = MyCaret.topY;
-						Selected.BottomY = MyCaret.bottomY;
+						Selected.BottomY = MyCaret.bottomY+5;
 						ButtonPressed = true;
 					}
 					/*Going outside the leftmost bound on the same line as the insertion point*/
@@ -238,25 +239,65 @@ int main()
 					}
 					/*Move highlighting down an array*/
 					if(CoordY > Selected.BottomY){
-							++Selected.Difference;
-							if(Selected.Difference<2)
-								position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
-							else{
-								position = 0;
-								for(int i=1;i==nRectangles-1;++i){
-									Rectangles[i].x = 10;
-									Rectangles[i].width = (LinePointers[CurrentSelectedArray+i]->length)*6;
-								}
-							}
-							Rectangles[nRectangles-1].width = ((LinePointers[CurrentSelectedArray]->length)-position)*6;
-							XRectangle Rectangle = {10, (Selected.TopY+(15*nRectangles)), (Selected.RightX-10), 10};
-							Rectangles[nRectangles] = Rectangle;
-							++nRectangles;
+						YDirection = 1;
+						++Selected.Difference;
+						Direction = 1;
+						MyCaret.topX = (XPosition*6)+10;
+						MyCaret.bottomX = (XPosition*6)+10;
+						MyCaret.topY = (YPosition*15)+10;
+						MyCaret.bottomY = (YPosition*15)+20;
+						MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
+						CurrentArray = YPosition;
+						if(nRectangles==0){
+							position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
+							int width = LinePointers[CurrentSelectedArray]->length - position;
+							/*++position;*/
+							XRectangle Rectangle1 = {MyCaret.topX, Selected.TopY, (width*6), 10};
+							Rectangles[nRectangles] = Rectangle1;
 							Selected.BottomY += 15;
 							++CurrentSelectedArray;
+							++nRectangles;
+							width = LinePointers[CurrentSelectedArray]->length - XPosition;
+							XRectangle Rectangle2 = {10, MyCaret.topY,(MyCaret.topX - 10), 10};
+							Selected.LeftX = 10;
+							Selected.RightX = MyCaret.topX;
+							Rectangles[nRectangles] = Rectangle2;
+							++nRectangles;
+						}
+						else if(nRectangles==1){
+							position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
+							if(MyCaret.topX > Rectangles[0].x)
+								Rectangles[0].width = (LinePointers[CurrentSelectedArray]->length - position)*6;
+							else
+								Rectangles[0].width = ((LinePointers[CurrentSelectedArray]->length * 6)+10)-Rectangles[0].x;
+							Selected.BottomY += 15;
+							++CurrentSelectedArray;
+							int width = LinePointers[CurrentSelectedArray]->length - XPosition;
+							XRectangle Rectangle = {10, MyCaret.topY,(MyCaret.topX-10), 10};
+							Selected.LeftX = 10;
+							Selected.RightX = MyCaret.topX;
+							Rectangles[nRectangles] = Rectangle;
+							++nRectangles;
+						}
+						else{
+							Selected.BottomY += 15;
+							++CurrentSelectedArray;
+							int width = LinePointers[CurrentSelectedArray]->length - XPosition;
+							XRectangle Rectangle = {10, MyCaret.topY,(MyCaret.topX-10), 10};
+							Selected.LeftX = 10;
+							Selected.RightX = MyCaret.topX;
+							Rectangles[nRectangles] = Rectangle;
+							for(int i=1;i!=nRectangles;++i){
+								Rectangles[i].x = 10;
+								Rectangles[i].width = LinePointers[CurrentSelectedArray-(nRectangles-i)]->length * 6;
+							}
+							++nRectangles;
+								
+						}
 					}
 					/*Move highlighting up an array*/
 					if(CoordY < Selected.TopY){
+						YDirection = 0;
 						++Selected.Difference;
 						Direction = 0;
 						MyCaret.topX = (XPosition*6)+10;
@@ -309,7 +350,46 @@ int main()
 							++nRectangles;
 						}
 					}
-					if(CoordY > Selected.TopY + 15){
+					if(CoordY < Selected.BottomY - 15 && YDirection == 1){
+						--Selected.Difference;
+						Direction = 1;
+						MyCaret.topX = (XPosition*6)+10;
+						MyCaret.bottomX = (XPosition*6)+10;
+						MyCaret.topY = (YPosition*15)+10;
+						MyCaret.bottomY = (YPosition*15)+20;
+						MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
+						CurrentArray = YPosition;
+						CurrentSelectedArray=CurrentArray;
+						if(nRectangles > 2){
+							Rectangles[nRectangles-2].x = 10;
+							Rectangles[nRectangles-2].y = MyCaret.topY;
+							Rectangles[nRectangles-2].width = MyCaret.topX - 10;
+							Selected.BottomY -= 15;
+							Selected.LeftX = 10;
+							Selected.RightX = MyCaret.topX;
+						}
+						else{
+							Selected.BottomY -= 15;
+							Selected.LeftX = MyCaret.topX;
+							Selected.RightX = Rectangles[0].x + Rectangles[0].width;
+							if(MyCaret.topX < (Rectangles[0].x + Rectangles[0].width)){
+								Direction = 0;
+								int width = Rectangles[0].x-MyCaret.topX;
+								Rectangles[0].x = MyCaret.topX;
+								Rectangles[0].width = width;
+							}
+							/*Working on this. You need to have selecting work on both sides*/
+							else {
+								Rectangles[0].x = Rectangles[0].x + Rectangles[0].width;
+								Rectangles[0].width = MyCaret.topX - Rectangles[0].x;
+								Selected.LeftX = Rectangles[0].x;
+								Selected.RightX = MyCaret.topX;
+							}
+						}
+						--nRectangles;
+					}
+					/*Going back down after going up while selecting*/
+					if(CoordY > Selected.TopY + 15 && YDirection == 0){
 						--Selected.Difference;
 						Direction = 0;
 						MyCaret.topX = (XPosition*6)+10;
@@ -332,16 +412,18 @@ int main()
 							Selected.TopY = MyCaret.topY;
 							Selected.LeftX = MyCaret.topX;
 							Selected.RightX = Rectangles[0].x + Rectangles[0].width;
-							if(MyCaret.topX > Rectangles[0].x){
+							if(MyCaret.topX < (Rectangles[0].x + Rectangles[0].width)){
 								int width = (Rectangles[0].x + Rectangles[0].width)-MyCaret.topX;
 								Rectangles[0].x = MyCaret.topX;
 								Rectangles[0].width = width;
 							}
-							/*Needs to be corrected. This is what happens when you go down after going up on the right side.*/
 							else {
-								int width = LinePointers[CurrentSelectedArray]->length - XPosition;
+								Direction = 1;
 								Rectangles[0].x = Rectangles[0].x + Rectangles[0].width;
-								Rectangles[0].width = width*6;
+								Rectangles[0].width = MyCaret.topX - Rectangles[0].x;
+								Selected.TopY = MyCaret.topY;
+								Selected.LeftX = Rectangles[0].x;
+								Selected.RightX = MyCaret.topX;
 							}
 						}
 						--nRectangles;
