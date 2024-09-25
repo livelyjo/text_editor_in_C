@@ -128,9 +128,7 @@ int main()
 	int CurrentSelectedArray = 0;
 	int Direction;
 	int YDirection;
-
-/*Continue working on select functionality. Do this by refactoring the down selecting and when selecting in either direction it regresses a line. Same thing that happens when going left then right for selecting*/
-
+	bool IsSelected = false;
 	while(IsWindowOpen) {
 		XEvent GeneralEvent = {};
 		XNextEvent(MainDisplay, &GeneralEvent);
@@ -142,6 +140,7 @@ int main()
 			int CoordY = Event->y;
 			int XPosition = (CoordX-10)/6;
 			int YPosition = (CoordY-10)/15;
+			IsSelected = false;
 			if(YPosition <= nLinePointers-1){
 				CurrentArray = YPosition;
 				CurrentSelectedArray = CurrentArray;
@@ -177,6 +176,7 @@ int main()
 					}
 					/*Going outside the leftmost bound on the same line as the insertion point*/
 					if(CoordX < Selected.LeftX){
+						IsSelected = true;
 						Direction = 0;
 						--Selected.End2;
 						Selected.LeftX -= 6;
@@ -200,6 +200,7 @@ int main()
 					}
 					/*Going outside the rightmost bound on the same line as the insertion point*/
 					if(CoordX > Selected.RightX){
+						IsSelected = true;
 						Direction = 1;
 						++Selected.End2;
 						Selected.RightX += 6;
@@ -218,6 +219,7 @@ int main()
 					}
 					/*Move the highlighted area in from the leftmost bound on the line of the insertion point*/
 					if(CoordX > Selected.LeftX+6 && Direction == 0){
+						IsSelected = true;
 						--Selected.End2;
 						Selected.LeftX += 6;
 						MyCaret.topX = ((XPosition)*6)+10;
@@ -229,6 +231,7 @@ int main()
 					}
 					/*Move the highlighted area in from the rightmost bound on the line of the insertion point*/
 					if(CoordX < Selected.RightX-6 && Direction == 1){
+						IsSelected = true;
 						++Selected.End2;
 						Selected.RightX -= 6;
 						MyCaret.topX = ((XPosition+1)*6)+10;
@@ -239,6 +242,7 @@ int main()
 					}
 					/*Move highlighting down an array*/
 					if(CoordY > Selected.BottomY){
+						IsSelected = true;
 						YDirection = 1;
 						++Selected.Difference;
 						Direction = 1;
@@ -297,6 +301,7 @@ int main()
 					}
 					/*Move highlighting up an array*/
 					if(CoordY < Selected.TopY){
+						IsSelected = true;
 						YDirection = 0;
 						++Selected.Difference;
 						Direction = 0;
@@ -350,7 +355,9 @@ int main()
 							++nRectangles;
 						}
 					}
+					/*Going back up after going down while selecting*/
 					if(CoordY < Selected.BottomY - 15 && YDirection == 1){
+						IsSelected = true;
 						--Selected.Difference;
 						Direction = 1;
 						MyCaret.topX = (XPosition*6)+10;
@@ -372,15 +379,17 @@ int main()
 							Selected.BottomY -= 15;
 							Selected.LeftX = MyCaret.topX;
 							Selected.RightX = Rectangles[0].x + Rectangles[0].width;
-							if(MyCaret.topX < (Rectangles[0].x + Rectangles[0].width)){
+							/*Left of originally selected point aka End1*/
+							if(MyCaret.topX < Rectangles[0].x){
 								Direction = 0;
 								int width = Rectangles[0].x-MyCaret.topX;
 								Rectangles[0].x = MyCaret.topX;
 								Rectangles[0].width = width;
+								Selected.LeftX = MyCaret.topX;
+								Selected.RightX = MyCaret.topX + width;
 							}
-							/*Working on this. You need to have selecting work on both sides*/
+							/*Right of originally selected point aka End1*/
 							else {
-								Rectangles[0].x = Rectangles[0].x + Rectangles[0].width;
 								Rectangles[0].width = MyCaret.topX - Rectangles[0].x;
 								Selected.LeftX = Rectangles[0].x;
 								Selected.RightX = MyCaret.topX;
@@ -390,6 +399,7 @@ int main()
 					}
 					/*Going back down after going up while selecting*/
 					if(CoordY > Selected.TopY + 15 && YDirection == 0){
+						IsSelected = true;
 						--Selected.Difference;
 						Direction = 0;
 						MyCaret.topX = (XPosition*6)+10;
@@ -434,14 +444,39 @@ int main()
 		}
 		/*Button Released*/
 		else if(GeneralEvent.type == ButtonRelease){
-			nRectangles = 0;
 			ButtonPressed = false;
+			if(IsSelected==false)
+				nRectangles = 0;
 		}
 		else if(GeneralEvent.type == KeyPress){
 			ButtonPressed = false;
 			XKeyEvent *Event = &GeneralEvent.xkey;
 			if(AllocatedLines <= nLinePointers+1) {
 				expand_array(LinePointers, &AllocatedLines);
+			}
+			if(IsSelected==true){
+				nRectangles = 0;
+				IsSelected==false;
+				if(Selected.Difference == 0){
+					if(Selected.End1 < Selected.End2){
+						/*Look at how MyCaret.InsertionPoint works with End1 and End2 to figure out why this isn't working*/
+						ptrdiff_t remove = Selected.End2 - Selected.End1;
+						MyCaret.InsertionPoint = Selected.End1;
+						MyCaret.topX = MyCaret.bottomX = Rectangles[0].x;
+						for(char *character=++Selected.End2;*character=='\0';++character,++Selected.End1){
+							*Selected.End1 = *character;
+							--MyCaret.InsertionPoint;
+						}
+						*Selected.End1 = '\0';
+						LinePointers[CurrentArray]->length -= remove;
+					}
+					else{
+						for(char *character=++Selected.End1;*character=='\0';++character,++Selected.End2){
+							*Selected.End2 = *character;
+						}
+						*Selected.End2 = '\0';
+					}
+				}
 			}
 			/*Backspace*/
 			if(Event->keycode == 22){
