@@ -166,6 +166,7 @@ int main()
 			if(YPosition <= nLinePointers-1){
 				if(XPosition <= LinePointers[YPosition]->length){
 					if(ButtonPressed==false){
+						MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
 						Selected.End1 = MyCaret.InsertionPoint;
 						Selected.End2 = MyCaret.InsertionPoint;
 						Selected.Difference = 0;
@@ -178,7 +179,13 @@ int main()
 					if(CoordX < Selected.LeftX){
 						IsSelected = true;
 						Direction = 0;
-						--Selected.End2;
+						if(Selected.End1 == Selected.End2)
+							Selected.End2 -= 2;
+						else
+							--Selected.End2;
+						printf("Selected.End2 is: %c\n", *Selected.End2);
+						printf("Selected.End1 is: %c\n\n", *Selected.End1);
+						fflush(stdout);
 						Selected.LeftX -= 6;
 						MyCaret.topX = ((XPosition)*6)+10;
 						MyCaret.bottomX = ((XPosition)*6)+10;
@@ -456,25 +463,30 @@ int main()
 			}
 			if(IsSelected==true){
 				nRectangles = 0;
-				IsSelected==false;
+				IsSelected=false;
 				if(Selected.Difference == 0){
+					/*There's small glitches with both of these and the else still needs to be implemented correctly*/
 					if(Selected.End1 < Selected.End2){
-						/*Look at how MyCaret.InsertionPoint works with End1 and End2 to figure out why this isn't working*/
 						ptrdiff_t remove = Selected.End2 - Selected.End1;
 						MyCaret.InsertionPoint = Selected.End1;
 						MyCaret.topX = MyCaret.bottomX = Rectangles[0].x;
-						for(char *character=++Selected.End2;*character=='\0';++character,++Selected.End1){
+						for(char *character=Selected.End2;*character!='\0';++character,++Selected.End1){
 							*Selected.End1 = *character;
-							--MyCaret.InsertionPoint;
 						}
 						*Selected.End1 = '\0';
 						LinePointers[CurrentArray]->length -= remove;
 					}
 					else{
-						for(char *character=++Selected.End1;*character=='\0';++character,++Selected.End2){
+						ptrdiff_t remove = Selected.End1 - Selected.End2;
+						MyCaret.InsertionPoint = Selected.End2;
+						MyCaret.topX = MyCaret.bottomX = Rectangles[0].x;
+						printf("Selected.End2 is: %c", *Selected.End2);
+						fflush(stdout);
+						for(char *character=++Selected.End1;*character!='\0';++character,++Selected.End2){
 							*Selected.End2 = *character;
 						}
 						*Selected.End2 = '\0';
+						LinePointers[CurrentArray]->length -= remove;
 					}
 				}
 			}
