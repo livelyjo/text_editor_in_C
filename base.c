@@ -168,7 +168,7 @@ int main()
 					if(ButtonPressed==false){
 						MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
 						Selected.End1 = MyCaret.InsertionPoint;
-						Selected.End2 = MyCaret.InsertionPoint;
+						Selected.End2 = NULL;
 						Selected.Difference = 0;
 						Selected.LeftX = Selected.RightX = MyCaret.topX;
 						Selected.TopY = MyCaret.topY;
@@ -179,8 +179,8 @@ int main()
 					if(CoordX < Selected.LeftX){
 						IsSelected = true;
 						Direction = 0;
-						if(Selected.End1 == Selected.End2)
-							Selected.End2 -= 2;
+						if(Selected.End2 == NULL)
+							Selected.End2 = Selected.End1-1;
 						else
 							--Selected.End2;
 						printf("Selected.End2 is: %c\n", *Selected.End2);
@@ -197,8 +197,15 @@ int main()
 							++nRectangles;
 						}
 						else if (nRectangles==1){
-							Rectangles[nRectangles-1].x = Selected.LeftX;
-							Rectangles[nRectangles-1].width = Selected.RightX - Selected.LeftX;
+							if(Selected.End2 == Selected.End1-1){
+								Rectangles[nRectangles-1].x = Selected.LeftX;
+								Selected.RightX -= 6;
+								Rectangles[nRectangles-1].width = Selected.RightX - Selected.LeftX;
+							}
+							else{
+								Rectangles[nRectangles-1].x = Selected.LeftX;
+								Rectangles[nRectangles-1].width = Selected.RightX - Selected.LeftX;
+							}
 						}
 						else{
 							Rectangles[nRectangles-1].x = Selected.LeftX;
@@ -209,7 +216,13 @@ int main()
 					if(CoordX > Selected.RightX){
 						IsSelected = true;
 						Direction = 1;
-						++Selected.End2;
+						if(Selected.End2 == NULL)
+							Selected.End2 = Selected.End1;
+						else
+							++Selected.End2;
+						printf("Selected.End2 is: %c\n", *Selected.End2);
+						printf("Selected.End1 is: %c\n\n", *Selected.End1);
+						fflush(stdout);
 						Selected.RightX += 6;
 						MyCaret.topX = ((XPosition+1)*6)+10;
 						MyCaret.bottomX = ((XPosition+1)*6)+10;
@@ -220,6 +233,10 @@ int main()
 							Rectangles[nRectangles] = Rectangle;
 							++nRectangles;
 						}
+						else if(nRectangles == 1 && Selected.End2 == Selected.End1){
+							Selected.LeftX += 6;
+							Rectangles[nRectangles-1].x += 6;
+						}
 						else{
 							Rectangles[nRectangles-1].width = Selected.RightX - Selected.LeftX;
 						}
@@ -227,7 +244,10 @@ int main()
 					/*Move the highlighted area in from the leftmost bound on the line of the insertion point*/
 					if(CoordX > Selected.LeftX+6 && Direction == 0){
 						IsSelected = true;
-						--Selected.End2;
+						++Selected.End2;
+						printf("Selected.End1: %c\n", *Selected.End1);
+						printf("Selected.End2: %c\n\n", *Selected.End2);
+						fflush(stdout);
 						Selected.LeftX += 6;
 						MyCaret.topX = ((XPosition)*6)+10;
 						MyCaret.bottomX = ((XPosition)*6)+10;
@@ -239,7 +259,10 @@ int main()
 					/*Move the highlighted area in from the rightmost bound on the line of the insertion point*/
 					if(CoordX < Selected.RightX-6 && Direction == 1){
 						IsSelected = true;
-						++Selected.End2;
+						--Selected.End2;
+						printf("Selected.End1: %c\n", *Selected.End1);
+						printf("Selected.End2: %c\n\n", *Selected.End2);
+						fflush(stdout);
 						Selected.RightX -= 6;
 						MyCaret.topX = ((XPosition+1)*6)+10;
 						MyCaret.bottomX = ((XPosition+1)*6)+10;
@@ -258,11 +281,11 @@ int main()
 						MyCaret.topY = (YPosition*15)+10;
 						MyCaret.bottomY = (YPosition*15)+20;
 						MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
+						Selected.End2 = MyCaret.InsertionPoint;
 						CurrentArray = YPosition;
 						if(nRectangles==0){
 							position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
 							int width = LinePointers[CurrentSelectedArray]->length - position;
-							/*++position;*/
 							XRectangle Rectangle1 = {MyCaret.topX, Selected.TopY, (width*6), 10};
 							Rectangles[nRectangles] = Rectangle1;
 							Selected.BottomY += 15;
@@ -310,13 +333,14 @@ int main()
 					if(CoordY < Selected.TopY){
 						IsSelected = true;
 						YDirection = 0;
-						++Selected.Difference;
+						--Selected.Difference;
 						Direction = 0;
 						MyCaret.topX = (XPosition*6)+10;
 						MyCaret.bottomX = (XPosition*6)+10;
 						MyCaret.topY = (YPosition*15)+10;
 						MyCaret.bottomY = (YPosition*15)+20;
 						MyCaret.InsertionPoint = &LinePointers[YPosition]->string[XPosition];
+						Selected.End2 = MyCaret.InsertionPoint;
 						CurrentArray = YPosition;
 						if(nRectangles==0){
 							position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
@@ -465,28 +489,43 @@ int main()
 				nRectangles = 0;
 				IsSelected=false;
 				if(Selected.Difference == 0){
-					/*There's small glitches with both of these and the else still needs to be implemented correctly*/
-					if(Selected.End1 < Selected.End2){
+					if(Selected.End1 <= Selected.End2 && Selected.Difference==0){
 						ptrdiff_t remove = Selected.End2 - Selected.End1;
 						MyCaret.InsertionPoint = Selected.End1;
 						MyCaret.topX = MyCaret.bottomX = Rectangles[0].x;
-						for(char *character=Selected.End2;*character!='\0';++character,++Selected.End1){
+						for(char *character=++Selected.End2;*character!='\0';++character,++Selected.End1){
 							*Selected.End1 = *character;
 						}
 						*Selected.End1 = '\0';
-						LinePointers[CurrentArray]->length -= remove;
+						LinePointers[CurrentArray]->length -= remove+1;
 					}
-					else{
+					else if(Selected.Difference==0){
 						ptrdiff_t remove = Selected.End1 - Selected.End2;
 						MyCaret.InsertionPoint = Selected.End2;
 						MyCaret.topX = MyCaret.bottomX = Rectangles[0].x;
 						printf("Selected.End2 is: %c", *Selected.End2);
 						fflush(stdout);
-						for(char *character=++Selected.End1;*character!='\0';++character,++Selected.End2){
+						for(char *character=Selected.End1;*character!='\0';++character,++Selected.End2){
 							*Selected.End2 = *character;
 						}
 						*Selected.End2 = '\0';
 						LinePointers[CurrentArray]->length -= remove;
+					}
+					/*These conditional statements will allow multiple line to be deleted with select instead of just character in a single row*/
+					else if(Selected.Difference>0){
+						if(Selected.Difference==1){
+							ptrdiff_t TopDifference = Selected.End1 - LinePointers[CurrentArray-Selected.Difference]->string;
+							LinePointers[CurrentArray-Selected.Difference]->length = TopDifference;
+							/*This will be moving the bottom array starting right after End2 to the very front of the array*/
+						}
+						else{
+						}
+					}
+					else if(Selected.Difference<0){
+						if(Selected.Difference==-1){
+						}
+						else{
+						}
 					}
 				}
 			}
@@ -512,6 +551,13 @@ int main()
 					LinePointers[CurrentArray]->string[(LinePointers[CurrentArray]->length)+1] = '\0';
 					MyCaret.topX -= 6;
 					MyCaret.bottomX -= 6;
+					char *character;
+					for(character=MyCaret.InsertionPoint;*character!='\0';++character){
+						char *previous = character-1;
+						*previous = *character;
+					}
+					char *last_previous = character-1;
+					*last_previous = *character;
 					--MyCaret.InsertionPoint;
 				}
 			}
