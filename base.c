@@ -511,21 +511,35 @@ int main()
 						*Selected.End2 = '\0';
 						LinePointers[CurrentArray]->length -= remove;
 					}
+				}
 					/*These conditional statements will allow multiple line to be deleted with select instead of just character in a single row*/
-					else if(Selected.Difference>0){
-						if(Selected.Difference==1){
-							ptrdiff_t TopDifference = Selected.End1 - LinePointers[CurrentArray-Selected.Difference]->string;
-							LinePointers[CurrentArray-Selected.Difference]->length = TopDifference;
-							/*This will be moving the bottom array starting right after End2 to the very front of the array*/
+				else if(Selected.Difference>0){
+					if(Selected.Difference==1){
+						ptrdiff_t TopDifference = Selected.End1 - LinePointers[CurrentArray-Selected.Difference]->string;
+						LinePointers[CurrentArray-Selected.Difference]->length = TopDifference;
+						LinePointers[CurrentArray-Selected.Difference]->string[LinePointers[CurrentArray-Selected.Difference]->length] = '\0';
+						MyCaret.InsertionPoint = Selected.End1;
+						MyCaret.topX = MyCaret.bottomX = Rectangles[0].x;
+						MyCaret.topY = Rectangles[0].y;
+						MyCaret.bottomY = MyCaret.topY+10;
+						char *spot = LinePointers[CurrentArray]->string;
+						int NewLength = -1;
+						for(;*Selected.End2!='\0';++spot, ++Selected.End2){
+							++NewLength;
+							*spot = *Selected.End2;
 						}
-						else{
-						}
+						*spot = *Selected.End2;
+						LinePointers[CurrentArray]->length = NewLength+1;
+						--CurrentArray;
+						--CurrentSelectedArray;
 					}
-					else if(Selected.Difference<0){
-						if(Selected.Difference==-1){
-						}
-						else{
-						}
+					else{
+					}
+				}
+				else if(Selected.Difference<0){
+					if(Selected.Difference==-1){
+					}
+					else{
 					}
 				}
 			}
