@@ -344,7 +344,6 @@ int main()
 						CurrentArray = YPosition;
 						if(nRectangles==0){
 							position = Selected.End1 - LinePointers[CurrentSelectedArray]->string;
-							/*++position;*/
 							XRectangle Rectangle1 = {10, Selected.TopY, (position*6), 10};
 							Rectangles[nRectangles] = Rectangle1;
 							Selected.TopY -= 15;
@@ -486,7 +485,6 @@ int main()
 				expand_array(LinePointers, &AllocatedLines);
 			}
 			if(IsSelected==true){
-				nRectangles = 0;
 				IsSelected=false;
 				if(Selected.Difference == 0){
 					if(Selected.End1 <= Selected.End2 && Selected.Difference==0){
@@ -513,8 +511,8 @@ int main()
 					}
 				}
 					/*These conditional statements will allow multiple line to be deleted with select instead of just character in a single row*/
+				/*When I have selected down*/
 				else if(Selected.Difference>0){
-					if(Selected.Difference==1){
 						ptrdiff_t TopDifference = Selected.End1 - LinePointers[CurrentArray-Selected.Difference]->string;
 						LinePointers[CurrentArray-Selected.Difference]->length = TopDifference;
 						LinePointers[CurrentArray-Selected.Difference]->string[LinePointers[CurrentArray-Selected.Difference]->length] = '\0';
@@ -532,18 +530,42 @@ int main()
 						LinePointers[CurrentArray]->length = NewLength+1;
 						--CurrentArray;
 						--CurrentSelectedArray;
-					}
-					else{
-					}
+					/*Redo CurrentSelectedArray so that Current Array is where you started highlighting and CurrentSelectedArray is where you stopped*/
+					/*if(Selected.Difference > 1){
+						for(i=nLinePointers;i>0;--i){
+						}
+					}*/
 				}
+				/*When I have selected up*/
 				else if(Selected.Difference<0){
 					if(Selected.Difference==-1){
+						ptrdiff_t TopDifference = Selected.End2 - LinePointers[CurrentArray]->string;
+						LinePointers[CurrentArray]->length = TopDifference;
+						LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = '\0';
+						MyCaret.InsertionPoint = Selected.End2;
+						MyCaret.topX = MyCaret.bottomX = Rectangles[nRectangles-1].x;
+						MyCaret.topY = Rectangles[nRectangles-1].y;
+						MyCaret.bottomY = MyCaret.topY+10;
+						char *spot = LinePointers[CurrentArray+1]->string;
+						int NewLength = -1;
+						for(;*Selected.End1!='\0';++spot, ++Selected.End1){
+							++NewLength;
+							*spot = *Selected.End1;
+						}
+						*spot = *Selected.End2;
+						LinePointers[CurrentArray+1]->length = NewLength+1;
 					}
 					else{
 					}
 				}
+				nRectangles = 0;
 			}
 			/*Backspace*/
+			/*
+			  Have multiple errors that need to be addressed. 
+			  First is when deleting line to line starting at the bottom the caret isn't aligned proberly
+			  Second is when deleting line to line from a line besides the bottom the arrays are then duplicated
+			*/
 			if(Event->keycode == 22){
 				TruePosition = false;
 				if((LinePointers[CurrentArray]->length)==0 && CurrentArray!=0){
