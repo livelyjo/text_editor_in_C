@@ -513,28 +513,25 @@ int main()
 					/*These conditional statements will allow multiple line to be deleted with select instead of just character in a single row*/
 				/*When I have selected down*/
 				else if(Selected.Difference>0){
-						ptrdiff_t TopDifference = Selected.End1 - LinePointers[CurrentArray-Selected.Difference]->string;
-						LinePointers[CurrentArray-Selected.Difference]->length = TopDifference;
-						LinePointers[CurrentArray-Selected.Difference]->string[LinePointers[CurrentArray-Selected.Difference]->length] = '\0';
-						MyCaret.InsertionPoint = Selected.End1;
-						MyCaret.topX = MyCaret.bottomX = Rectangles[0].x;
-						MyCaret.topY = Rectangles[0].y;
-						MyCaret.bottomY = MyCaret.topY+10;
-						char *spot = LinePointers[CurrentArray]->string;
-						int NewLength = -1;
-						for(;*Selected.End2!='\0';++spot, ++Selected.End2){
-							++NewLength;
-							*spot = *Selected.End2;
-						}
+					ptrdiff_t TopDifference = Selected.End1 - LinePointers[CurrentArray-Selected.Difference]->string;
+					LinePointers[CurrentArray-Selected.Difference]->length = TopDifference;
+					LinePointers[CurrentArray-Selected.Difference]->string[LinePointers[CurrentArray-Selected.Difference]->length] = '\0';
+					MyCaret.InsertionPoint = Selected.End1;
+					MyCaret.topX = MyCaret.bottomX = Rectangles[0].x;
+					MyCaret.topY = Rectangles[0].y;
+					MyCaret.bottomY = MyCaret.topY+10;
+					char *spot = LinePointers[CurrentArray]->string;
+					int NewLength = -1;
+					for(;*Selected.End2!='\0';++spot, ++Selected.End2){
+						++NewLength;
 						*spot = *Selected.End2;
-						LinePointers[CurrentArray]->length = NewLength+1;
-					/*Something is off here, it keeps leaving the middle values*/
+					}
+					*spot = *Selected.End2;
+					LinePointers[CurrentArray]->length = NewLength+1;
 					if(Selected.Difference > 1){
 						int i = CurrentArray;
 						int spot = CurrentArray-(Selected.Difference-1);
-						printf("spot: %d i: %d", spot, i);
-						fflush(stdout);
-						for(;i!=nLinePointers-1;++i,++spot){
+						for(;i!=nLinePointers;++i,++spot){
 							*LinePointers[spot] = *LinePointers[i];
 						}
 						nLinePointers -= Selected.Difference-1;
@@ -547,26 +544,33 @@ int main()
 						--CurrentSelectedArray;
 					}
 				}
+				/*Something is slightly off here*/
 				/*When I have selected up*/
 				else if(Selected.Difference<0){
-					if(Selected.Difference==-1){
-						ptrdiff_t TopDifference = Selected.End2 - LinePointers[CurrentArray]->string;
-						LinePointers[CurrentArray]->length = TopDifference;
-						LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = '\0';
-						MyCaret.InsertionPoint = Selected.End2;
-						MyCaret.topX = MyCaret.bottomX = Rectangles[nRectangles-1].x;
-						MyCaret.topY = Rectangles[nRectangles-1].y;
-						MyCaret.bottomY = MyCaret.topY+10;
-						char *spot = LinePointers[CurrentArray+1]->string;
-						int NewLength = -1;
-						for(;*Selected.End1!='\0';++spot, ++Selected.End1){
-							++NewLength;
-							*spot = *Selected.End1;
-						}
-						*spot = *Selected.End2;
-						LinePointers[CurrentArray+1]->length = NewLength+1;
+					ptrdiff_t TopDifference = Selected.End2 - LinePointers[CurrentArray]->string;
+					LinePointers[CurrentArray]->length = TopDifference;
+					LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = '\0';
+					MyCaret.InsertionPoint = Selected.End2;
+					MyCaret.topX = MyCaret.bottomX = Rectangles[nRectangles-1].x;
+					MyCaret.topY = Rectangles[nRectangles-1].y;
+					MyCaret.bottomY = MyCaret.topY+10;
+					char *spot = LinePointers[CurrentArray+1]->string;
+					int NewLength = -1;
+					for(;*Selected.End1!='\0';++spot, ++Selected.End1){
+						++NewLength;
+						*spot = *Selected.End1;
 					}
-					else{
+					*spot = *Selected.End2;
+					LinePointers[CurrentArray+1]->length = NewLength+1;
+					if(Selected.Difference < -1){
+						Selected.Difference = Selected.Difference * -1;
+						int i = CurrentArray+Selected.Difference;
+						int spot = CurrentArray+1;
+						for(;i!=nLinePointers;++i,++spot){
+							*LinePointers[spot] = *LinePointers[i];
+						}
+						nLinePointers -= Selected.Difference-1;
+						LinePointers[nLinePointers] = NULL;
 					}
 				}
 				Selected.Difference = nRectangles = 0;
@@ -620,6 +624,7 @@ int main()
 					++MyCaret.InsertionPoint;
 				}
 			}
+			/*There are mutliple issues with this as well. Like how it doesn't take the rest of the characters to the new line*/
 			/*Return*/
 			else if(Event->keycode == 36){
 				TruePosition = false;
