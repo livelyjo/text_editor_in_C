@@ -528,13 +528,24 @@ int main()
 						}
 						*spot = *Selected.End2;
 						LinePointers[CurrentArray]->length = NewLength+1;
+					/*Something is off here, it keeps leaving the middle values*/
+					if(Selected.Difference > 1){
+						int i = CurrentArray;
+						int spot = CurrentArray-(Selected.Difference-1);
+						printf("spot: %d i: %d", spot, i);
+						fflush(stdout);
+						for(;i!=nLinePointers-1;++i,++spot){
+							*LinePointers[spot] = *LinePointers[i];
+						}
+						nLinePointers -= Selected.Difference-1;
+						LinePointers[nLinePointers] = NULL;
+						CurrentArray -= Selected.Difference;
+						CurrentSelectedArray = CurrentArray;
+					}
+					else{
 						--CurrentArray;
 						--CurrentSelectedArray;
-					/*Redo CurrentSelectedArray so that Current Array is where you started highlighting and CurrentSelectedArray is where you stopped*/
-					/*if(Selected.Difference > 1){
-						for(i=nLinePointers;i>0;--i){
-						}
-					}*/
+					}
 				}
 				/*When I have selected up*/
 				else if(Selected.Difference<0){
@@ -558,7 +569,7 @@ int main()
 					else{
 					}
 				}
-				nRectangles = 0;
+				Selected.Difference = nRectangles = 0;
 			}
 			/*Backspace*/
 			/*
