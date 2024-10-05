@@ -67,6 +67,17 @@ void expand_array(struct StringArray **MyArray, int *AllocatedLines)
 	*MyArray = realloc(*MyArray, *AllocatedLines * sizeof(struct StringArray*));
 }
 
+void wrap_array(struct StringArray **PointerArray, int *CurrentArray, int WrapSize)
+{
+	/*need to think about how to add the pointer to the string array*/
+	char *LastVal = PointerArray[*CurrentArray]->string[WrapSize-2];
+	++LastVal;
+	int count = 1;
+	for(;LastVal!=' ';--LastVal) ++count;
+	for(;count!=0;--count,--LastVal){
+	}
+}
+
 int main() 
 {
 	Display* MainDisplay = XOpenDisplay(0);
@@ -544,8 +555,6 @@ int main()
 						--CurrentSelectedArray;
 					}
 				}
-				/*Something is slightly off here*/
-				/*When I have selected up*/
 				else if(Selected.Difference<0){
 					ptrdiff_t TopDifference = Selected.End2 - LinePointers[CurrentArray]->string;
 					LinePointers[CurrentArray]->length = TopDifference;
@@ -554,14 +563,16 @@ int main()
 					MyCaret.topX = MyCaret.bottomX = Rectangles[nRectangles-1].x;
 					MyCaret.topY = Rectangles[nRectangles-1].y;
 					MyCaret.bottomY = MyCaret.topY+10;
-					char *spot = LinePointers[CurrentArray+1]->string;
+					char *spot = LinePointers[CurrentArray+(Selected.Difference*-1)]->string;
 					int NewLength = -1;
 					for(;*Selected.End1!='\0';++spot, ++Selected.End1){
 						++NewLength;
 						*spot = *Selected.End1;
 					}
-					*spot = *Selected.End2;
-					LinePointers[CurrentArray+1]->length = NewLength+1;
+					*spot = *Selected.End1;
+					LinePointers[CurrentArray+(Selected.Difference*-1)]->length = NewLength+1;
+					printf("Full Line: %s", LinePointers[1]->string);
+					fflush(stdout);
 					if(Selected.Difference < -1){
 						Selected.Difference = Selected.Difference * -1;
 						int i = CurrentArray+Selected.Difference;
@@ -731,14 +742,14 @@ int main()
 					char Current = *MyCaret.InsertionPoint;
 					char Previous;
 					char * ipoint=(MyCaret.InsertionPoint)+1;
-					for(ipoint=ipoint;*ipoint!='\0';++ipoint){
+					for(;*ipoint!='\0';++ipoint){
 						Previous=Current;
 						Current = *ipoint;
 						*ipoint = Previous;
 					}
 					*ipoint = Current;
 					++ipoint;
-					ipoint = '\0';
+					*ipoint = '\0';
 					++LinePointers[CurrentArray]->length;
 					bytes_buffer = sizeof(buffer_return);
 					Test = XmbLookupString(StringContext, Event, buffer_return, bytes_buffer, &keysym_return, &status_return);
