@@ -67,14 +67,29 @@ void expand_array(struct StringArray **MyArray, int *AllocatedLines)
 	*MyArray = realloc(*MyArray, *AllocatedLines * sizeof(struct StringArray*));
 }
 
-void wrap_array(struct StringArray **PointerArray, int *CurrentArray, int WrapSize)
+int wrap_array_larger(struct StringArray **PointerArray, int *CurrentArray, int WrapSize)
 {
 	/*need to think about how to add the pointer to the string array*/
-	char *LastVal = PointerArray[*CurrentArray]->string[WrapSize-2];
-	++LastVal;
-	int count = 1;
-	for(;LastVal!=' ';--LastVal) ++count;
-	for(;count!=0;--count,--LastVal){
+	char PrevLineBuffer[100];
+	char CurLineBuffer[100];
+	int nPrevBuffer, nCurBuffer, WorkingArray=*CurrentArray;
+	while(1){
+		char *LastVal = PointerArray[WorkingArray]->string[WrapSize-2];
+		PrevlineBuffer[0] = *LastVal;
+		++nPrevBuffer;
+		--LastVal;
+		while(*LastVal!=' '){
+			++nPrevBuffer;
+			PrevLineBuffer[nPrevBuffer] = *LastVal;
+			--LastVal;
+		}
+		++LastVal;
+		*LastVal = '\0';
+		++WorkingArray;
+		if(99- PointerArray[WorkingArray]->length >= nPrevBuffer){
+			/*You will start on the end and move each character as many spaces as are in nPrevBuffer until you move the 
+			 * first character. Then you will put in the new characters in at the beginning overwriting what was there*/
+		}
 	}
 }
 
