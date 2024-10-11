@@ -72,10 +72,10 @@ int wrap_array_larger(struct StringArray **PointerArray, int *CurrentArray, int 
 	/*need to think about how to add the pointer to the string array*/
 	char PrevLineBuffer[100];
 	char CurLineBuffer[100];
-	int nPrevBuffer, nCurBuffer, WorkingArray=*CurrentArray;
+	int nPrevBuffer=0, nCurBuffer=0, WorkingArray=*CurrentArray;
 	while(1){
 		char *LastVal = PointerArray[WorkingArray]->string[WrapSize-2];
-		PrevlineBuffer[0] = *LastVal;
+		PrevLineBuffer[0] = *LastVal;
 		++nPrevBuffer;
 		--LastVal;
 		while(*LastVal!=' '){
@@ -89,6 +89,19 @@ int wrap_array_larger(struct StringArray **PointerArray, int *CurrentArray, int 
 		if(99- PointerArray[WorkingArray]->length >= nPrevBuffer){
 			/*You will start on the end and move each character as many spaces as are in nPrevBuffer until you move the 
 			 * first character. Then you will put in the new characters in at the beginning overwriting what was there*/
+			char *original = PointerArray[WorkingArray]->string[PointerArray[WorkingArray]->length-1];
+			char *new = PointerArray[WorkingArray]->string[PointerArray[WorkingArray]->length+nPrevBuffer-1;
+			/*The first value won't be changed which is a problem*/
+			do {
+				*new = *original;
+				--new;
+				--original;
+			} while(original!=PointerArray[WorkingArray]->string[0])
+			do {
+				*new = PrevLineBuffer[nPrevBuffer-1];
+				--new;
+				--nPrevBuffer;
+			} while(new!=PointerArray[workingArray]->string[0])
 		}
 	}
 }
