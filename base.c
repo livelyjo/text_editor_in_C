@@ -67,14 +67,61 @@ void expand_array(struct StringArray **MyArray, int *AllocatedLines)
 	*MyArray = realloc(*MyArray, *AllocatedLines * sizeof(struct StringArray*));
 }
 
-int wrap_array_larger(struct StringArray **PointerArray, int *CurrentArray, int WrapSize)
+void new_line_return(struct StringArray **LinePointers, int *nLinePointers, int *CurrentArray, int *topX, int *bottomX, int *topY, int *bottomY, char **InsertionPoint)
+{
+	if(LinePointers[*CurrentArray+1]!=NULL){
+		struct StringArray* Current = LinePointers[*CurrentArray];
+		LinePointers[*CurrentArray] = array_constructor();
+		++(*nLinePointers);
+		struct StringArray* Previous;
+		int i;
+		for(i=*CurrentArray+1;LinePointers[i]!=NULL;++i){
+			Previous = Current;
+			Current = LinePointers[i];
+			LinePointers[i] = Previous;
+		}
+		LinePointers[i] = Current;
+		LinePointers[i+1] = NULL;
+		++(*CurrentArray);
+	}
+	else {
+		++(*CurrentArray);
+		LinePointers[*CurrentArray] = array_constructor();
+		LinePointers[*CurrentArray+1] = NULL;
+		++(*nLinePointers);
+	}
+	*topX = 10;
+	*bottomX = 10;
+	*topY += 15;
+	*bottomY += 15;
+	*InsertionPoint = &LinePointers[*CurrentArray]->string[0];
+}
+
+void wrap_array_larger(int prefix, struct StringArray **PointerArray, int *nLinePointers, int *CurrentArray, int WrapSize, int *topX, int *bottomX, int *topY, int *bottomY, char **InsertionPoint)
 {
 	/*need to think about how to add the pointer to the string array*/
 	char PrevLineBuffer[100];
 	char CurLineBuffer[100];
 	int nPrevBuffer=0, nCurBuffer=0, WorkingArray=*CurrentArray;
+	if(prefix != -1){
+		char *LastVal = &PointerArray[WorkingArray]->string[WrapSize-2];
+		while(*LastVal!=' '){
+			PrevLineBuffer[nPrevBuffer] = *LastVal;
+			++nPrevBuffer;
+			--LastVal;
+		}
+		++LastVal;
+		*LastVal = '\0'
+		++(*CurrentArray);
+		PointerArray[*CurrentArray] = array_constructor();
+		PointerArray[*CurrentArray+1] = NULL;
+		++(*nLinePointers);
+		/*Need to set caret and need to add values to the beginning of the new array*/
+		while(nPrevBuffer>0){
+		}
+	}
 	while(1){
-		char *LastVal = PointerArray[WorkingArray]->string[WrapSize-2];
+		char *LastVal = &PointerArray[WorkingArray]->string[WrapSize-2];
 		PrevLineBuffer[0] = *LastVal;
 		++nPrevBuffer;
 		--LastVal;
@@ -89,19 +136,19 @@ int wrap_array_larger(struct StringArray **PointerArray, int *CurrentArray, int 
 		if(99- PointerArray[WorkingArray]->length >= nPrevBuffer){
 			/*You will start on the end and move each character as many spaces as are in nPrevBuffer until you move the 
 			 * first character. Then you will put in the new characters in at the beginning overwriting what was there*/
-			char *original = PointerArray[WorkingArray]->string[PointerArray[WorkingArray]->length-1];
-			char *new = PointerArray[WorkingArray]->string[PointerArray[WorkingArray]->length+nPrevBuffer-1;
-			/*The first value won't be changed which is a problem*/
-			do {
+			char *original = &PointerArray[WorkingArray]->string[PointerArray[WorkingArray]->length];
+			char *new = &PointerArray[WorkingArray]->string[PointerArray[WorkingArray]->length+nPrevBuffer];
+			while(original<&PointerArray[WorkingArray]->string[0]){
 				*new = *original;
 				--new;
 				--original;
-			} while(original!=PointerArray[WorkingArray]->string[0])
-			do {
+			}
+			while(new<&PointerArray[WorkingArray]->string[0]){
 				*new = PrevLineBuffer[nPrevBuffer-1];
 				--new;
 				--nPrevBuffer;
-			} while(new!=PointerArray[workingArray]->string[0])
+			}
+			break;
 		}
 	}
 }
@@ -667,38 +714,7 @@ int main()
 			/*Return*/
 			else if(Event->keycode == 36){
 				TruePosition = false;
-				if(LinePointers[CurrentArray+1]!=NULL){
-					struct StringArray* Current = LinePointers[CurrentArray];
-					LinePointers[CurrentArray] = array_constructor();
-					++nLinePointers;
-					struct StringArray* Previous;
-					int i;
-					for(i=CurrentArray+1;LinePointers[i]!=NULL;++i){
-						Previous = Current;
-						Current = LinePointers[i];
-						LinePointers[i] = Previous;
-					}
-					LinePointers[i] = Current;
-					LinePointers[i+1] = NULL;
-					++CurrentArray;
-					MyCaret.topX = 10;
-					MyCaret.bottomX = 10;
-					MyCaret.topY += 15;
-					MyCaret.bottomY += 15;
-					MyCaret.InsertionPoint = LinePointers[CurrentArray]->string;
-				}
-				else {
-					++CurrentArray;
-					LinePointers[CurrentArray] = array_constructor();
-					LinePointers[CurrentArray+1] = NULL;
-					++nLinePointers;
-					MyCaret.topX = 10;
-					MyCaret.bottomX = 10;
-					MyCaret.topY += 15;
-					MyCaret.bottomY += 15;
-					MyCaret.InsertionPoint = LinePointers[CurrentArray]->string;
-				}
-
+				new_line_return(LinePointers, &nLinePointers, &CurrentArray, &MyCaret.topX, &MyCaret.bottomX, &MyCaret.topY, &MyCaret.bottomY, &MyCaret.InsertionPoint);
 			}
 			/*Left*/
 			else if(Event->keycode == 113){
@@ -785,6 +801,21 @@ int main()
 					++MyCaret.InsertionPoint;
 					MyCaret.topX += 6;
 					MyCaret.bottomX += 6;
+				}
+				else if(LinePointers[CurrentArray]->length == 99){
+					bytes_buffer = sizeof(buffer_return);
+					Test = XmbLookupString(StringContext, Event, buffer_return, bytes_buffer, &keysym_return, &status_return);
+					if(*buffer_return == ' ' || LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length-1] == ' ')
+						new_line_return(LinePointers, &nLinePointers, &CurrentArray, &MyCaret.topX, &MyCaret.bottomX, &MyCaret.topY, &MyCaret.bottomY, &MyCaret.InsertionPoint);
+					else{
+						wrap_array_larger(1, LinePointers, &nLinePointers, &CurrentArray, 100, &MyCaret.topX, &MyCaret.bottomX, &MyCaret.topY, &MyCaret.bottomY, &MyCaret.InsertionPoint)
+					}
+					LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = *buffer_return;
+					LinePointers[CurrentArray]->string[(LinePointers[CurrentArray]->length)+1] = '\0';
+					++LinePointers[CurrentArray]->length;
+					MyCaret.topX += 6;
+					MyCaret.bottomX += 6;
+					++MyCaret.InsertionPoint;
 				}
 				else {
 					bytes_buffer = sizeof(buffer_return);
