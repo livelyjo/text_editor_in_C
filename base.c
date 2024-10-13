@@ -69,7 +69,11 @@ void expand_array(struct StringArray **MyArray, int *AllocatedLines)
 
 void new_line_return(struct StringArray **LinePointers, int *nLinePointers, int *CurrentArray, int *topX, int *bottomX, int *topY, int *bottomY, char **InsertionPoint)
 {
+	/*There is an added space when this code is called. find where's it's adding the space and remove it*/
 	if(LinePointers[*CurrentArray+1]!=NULL){
+		/*Why doesn't the next array equal Null*/
+		printf("hello");
+		fflush(stdout);
 		struct StringArray* Current = LinePointers[*CurrentArray];
 		LinePointers[*CurrentArray] = array_constructor();
 		++(*nLinePointers);
@@ -104,21 +108,30 @@ void wrap_array_larger(int prefix, struct StringArray **PointerArray, int *nLine
 	char CurLineBuffer[100];
 	int nPrevBuffer=0, nCurBuffer=0, WorkingArray=*CurrentArray;
 	if(prefix != -1){
-		char *LastVal = &PointerArray[WorkingArray]->string[WrapSize-2];
+		char *LastVal = &PointerArray[*CurrentArray]->string[WrapSize-2];
 		while(*LastVal!=' '){
 			PrevLineBuffer[nPrevBuffer] = *LastVal;
 			++nPrevBuffer;
 			--LastVal;
 		}
 		++LastVal;
-		*LastVal = '\0'
-		++(*CurrentArray);
+		*LastVal = '\0';
+		PointerArray[*CurrentArray]->length -= nPrevBuffer;
+		(*CurrentArray)++;
 		PointerArray[*CurrentArray] = array_constructor();
 		PointerArray[*CurrentArray+1] = NULL;
+		PointerArray[*CurrentArray]->length = nPrevBuffer;
 		++(*nLinePointers);
 		/*Need to set caret and need to add values to the beginning of the new array*/
+		*topX = *bottomX = (nPrevBuffer*6)+10;
+		*topY += 15;
+		*bottomY += 15;
+		*InsertionPoint = &PointerArray[*CurrentArray]->string[nPrevBuffer];
 		while(nPrevBuffer>0){
+			PointerArray[*CurrentArray]->string[nPrevBuffer-1] = PrevLineBuffer[nPrevBuffer-1];
+			--nPrevBuffer;
 		}
+		return;
 	}
 	while(1){
 		char *LastVal = &PointerArray[WorkingArray]->string[WrapSize-2];
@@ -783,6 +796,8 @@ int main()
 			else {
 				TruePosition = false;
 				if(*MyCaret.InsertionPoint != '\0'){
+					if(LinePointers[CurrentArray]->length == 99)
+						wrap_array_larger(-1, LinePointers, &nLinePointers, &CurrentArray, 100, NULL, NULL, NULL, NULL, NULL);
 					char Current = *MyCaret.InsertionPoint;
 					char Previous;
 					char * ipoint=(MyCaret.InsertionPoint)+1;
@@ -805,10 +820,11 @@ int main()
 				else if(LinePointers[CurrentArray]->length == 99){
 					bytes_buffer = sizeof(buffer_return);
 					Test = XmbLookupString(StringContext, Event, buffer_return, bytes_buffer, &keysym_return, &status_return);
-					if(*buffer_return == ' ' || LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length-1] == ' ')
+					if(*buffer_return == ' ' || LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length-1] == ' '){
 						new_line_return(LinePointers, &nLinePointers, &CurrentArray, &MyCaret.topX, &MyCaret.bottomX, &MyCaret.topY, &MyCaret.bottomY, &MyCaret.InsertionPoint);
+					}
 					else{
-						wrap_array_larger(1, LinePointers, &nLinePointers, &CurrentArray, 100, &MyCaret.topX, &MyCaret.bottomX, &MyCaret.topY, &MyCaret.bottomY, &MyCaret.InsertionPoint)
+						wrap_array_larger(1, LinePointers, &nLinePointers, &CurrentArray, 100, &MyCaret.topX, &MyCaret.bottomX, &MyCaret.topY, &MyCaret.bottomY, &MyCaret.InsertionPoint);
 					}
 					LinePointers[CurrentArray]->string[LinePointers[CurrentArray]->length] = *buffer_return;
 					LinePointers[CurrentArray]->string[(LinePointers[CurrentArray]->length)+1] = '\0';
